@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pip install:*)",
+      "Bash(python -c \"from pdf_parser import parse_pdf; from ledes_converter import save_ledes, convert_to_ledes98b; from config import DEFAULT_INPUT_DIR, DEFAULT_OUTPUT_DIR; print\\(''Imports OK''\\); print\\(''Input:'', DEFAULT_INPUT_DIR\\); print\\(''Output:'', DEFAULT_OUTPUT_DIR\\)\")",
+      "Read(//c/Users/user/Downloads/**)",
+      "Read(//c/Users/user/Desktop/PDF_Input/**)",
+      "Read(//c/Users/user/Desktop/**)",
+      "Bash(python:*)",
+      "Bash(cmd.exe /c \"dir \\\\\"C:\\\\Users\\\\user\\\\Desktop\\\\PDF_Input\\\\\"\")"
+    ]
+  }
+}
