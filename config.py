@@ -19,10 +19,47 @@ ACCOUNT_TYPE       = "O"
 DEFAULT_TASK_CODE = "L120"
 
 # UTBMS activity code mapping: regex pattern → code
-# Patterns are tested in order; first match wins
+# Patterns are tested in order; first match wins.
+# More specific patterns must come before general ones.
 ACTIVITY_CODE_RULES = [
-    (r"\bresearch\b", "A102"),
-    (r"\b(call|communicat|correspond|meet|discuss|letter|email)\b", "A106"),
+    # A109 - Appear for/attend (hearing with active participation)
+    (r"\b(speaking|appear|attend|participat)\w*\b.*\b(hear|trial|court|arbitrat|mediat)", "A109"),
+    (r"\b(hear|trial|court|arbitrat|mediat)\w*\b.*\b(speaking|appear|attend|participat)", "A109"),
+
+    # A108 - Communicate (other external: court, registry, authorities)
+    (r"\b(filing|fil\w+)\b.*\b(court|registr|authorit|office)\b", "A108"),
+    (r"\bserving\s+part", "A108"),
+    (r"\b(court|registr|authorit|notary|expert)\b.*\b(filing|submit|send|serv)", "A108"),
+
+    # A105 - Communicate (in firm / internally)
+    (r"\binternally\b", "A105"),
+    (r"\binternal\s+(call|meet|discuss|conference|deliberat)", "A105"),
+    (r"\b(discuss|deliberat)\w*\s+.*\binternally\b", "A105"),
+
+    # A103 - Draft/revise (drafting, amending, modifying documents)
+    (r"\b(draft|revis|amend|finaliz)\w*\b", "A103"),
+    (r"\bmodifying\s+(brief|document|motion|claim|petition|complaint|response)", "A103"),
+
+    # A102 - Research (legal research, prior art search, analysis)
+    (r"\b(research|prior\s*art\s*search)\b", "A102"),
+    (r"\banalys\w*\b.*\b(regarding|of|re)\b", "A102"),
+
+    # A101 - Plan and prepare for (preparing for hearing/trial without participation)
+    (r"\bprepar\w*\b.*\b(hearing|trial|court|arbitrat|mediat|proceed)\b", "A101"),
+    (r"\b(hearing|trial|court|arbitrat|mediat|proceed)\b.*\bprepar\w*\b", "A101"),
+
+    # A110 - Manage data/files
+    (r"\b(filing|organiz|index|docket|document\s*manag|manage\s*data|manage\s*file)\w*\b", "A110"),
+
+    # A111 - Other
+    (r"\b(travel|flight|train|transport|trip)\b", "A111"),
+
+    # A106 - Communicate (with client) - broad client communication
+    (r"\bclient\b", "A106"),
+    (r"\b(call|communicat|correspond|meet|discuss|letter|email|telephone|follow\w*\s*up)\b", "A106"),
+
+    # A104 - Review/analyze (standalone, fallback)
+    (r"\b(review|analyz|examin|evaluat|assess|inspect|stud)\w*\b", "A104"),
 ]
 
 # Timekeeper classification by hourly rate threshold
