@@ -247,7 +247,8 @@ def _extract_items_from_page(page, invoice_date: str) -> list[LineItem]:
                 item.total     = amounts[-1]
                 item.units     = round(item.total / item.unit_cost, 4) if item.unit_cost else 1.0
 
-            item.item_type = "E" if _EXPENSE_KW.search(" ".join(amt_texts + desc_words)) else "F"
+            # Disbursement rows have no timekeeper; otherwise it's a fee.
+            item.item_type = "F" if tk_words else "E"
             items.append(item)
 
         elif not date_str and items:
