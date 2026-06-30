@@ -8,7 +8,13 @@
       "Read(//c/Users/user/Desktop/**)",
       "Bash(python:*)",
       "Bash(cmd.exe /c \"dir \\\\\"C:\\\\Users\\\\user\\\\Desktop\\\\PDF_Input\\\\\"\")",
-      "Bash(ls *.ledes)"
+      "Bash(ls *.ledes)",
+      "Bash(.venv/bin/python *)",
+      "Read(//Users/dmitriy/Desktop/**)",
+      "Bash(read -r _)",
+      "Bash(printf '\\\\n')",
+      "Bash(tail -c1 ledes_converter.py)",
+      "Bash(echo \"newline fix done\")"
     ]
   }
 }
