@@ -1,0 +1,11 @@
+[flake8]
+# Project style: aligned assignments and descriptive long lines are intentional.
+max-line-length = 120
+extend-ignore =
+    E221,
+    E501
+exclude =
+    .venv,
+    .git,
+    .idea,
+    __pycache__

@@ -103,9 +103,17 @@ def _normalize_date(raw: str) -> str:
 
     m = re.match(r"(\d{1,2})[./\-](\d{1,2})[./\-](\d{2,4})$", raw)
     if m:
-        d, mo, y = m.groups()
+        a, b, y = int(m.group(1)), int(m.group(2)), m.group(3)
         y = ("20" + y) if len(y) == 2 else y
-        return f"{y}{int(mo):02d}{int(d):02d}"
+        # Default assumes day-first (DD/MM/YYYY). Detect US format (MM/DD/YYYY)
+        # when the first component can't be a day-of-month but the second can be:
+        # if the first number > 12 it must be the day; if the second > 12 it must
+        # be the day, so the components are month-first and need to be swapped.
+        if a <= 12 < b:
+            d, mo = b, a            # MM/DD/YYYY → swap to day, month
+        else:
+            d, mo = a, b            # DD/MM/YYYY (default)
+        return f"{y}{mo:02d}{d:02d}"
 
     m = re.match(r"(\d{4})[./\-](\d{1,2})[./\-](\d{1,2})$", raw)
     if m:

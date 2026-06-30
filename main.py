@@ -187,7 +187,7 @@ class App(tk.Tk):
             self.progress.stop()
             self.btn_convert.configure(state="normal")
             self._log("-" * 60)
-            self._log(f"Conversion complete.")
+            self._log("Conversion complete.")
             self._log(f"  Successfully converted : {ok}")
             self._log(f"  Failed                 : {errors}")
             if ok:
