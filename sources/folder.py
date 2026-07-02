@@ -2,11 +2,15 @@
 
 import os
 
-from sources.base import Source, FetchedFile
+from sources.base import Source, FetchedFile, INPUT_PATH
 
 
 class FolderSource(Source):
-    name = "Local folder"
+    name          = "Local folder"
+    key           = "folder"
+    input_mode    = INPUT_PATH
+    input_label   = "Input (PDF):"
+    convert_label = "  Convert  "
 
     def __init__(self, folder: str):
         self.folder = folder
@@ -23,3 +27,10 @@ class FolderSource(Source):
             FetchedFile(path=os.path.join(self.folder, f), name=f)
             for f in pdfs
         ]
+
+    @classmethod
+    def build(cls, gui_input) -> "FolderSource":
+        path = (gui_input or "").strip()
+        if not path or not os.path.isdir(path):
+            raise ValueError(f"Input folder not found:\n{path}")
+        return cls(path)

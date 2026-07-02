@@ -13,7 +13,7 @@ from config import (
     GDRIVE_DONE_FOLDER_NAME,
     GDRIVE_SCOPES,
 )
-from sources.base import Source, FetchedFile
+from sources.base import Source, FetchedFile, INPUT_PATH
 from sources.google_auth import get_credentials, GoogleAuthError
 
 PDF_MIME    = "application/pdf"
@@ -21,7 +21,11 @@ FOLDER_MIME = "application/vnd.google-apps.folder"
 
 
 class GoogleDriveSource(Source):
-    name = "Google Drive"
+    name          = "Google Drive"
+    key           = "gdrive"
+    input_mode    = INPUT_PATH
+    input_label   = "Download to:"
+    convert_label = "  Fetch & Convert  "
 
     def __init__(self, folder_id: str = GDRIVE_FOLDER_ID,
                  done_folder_name: str = GDRIVE_DONE_FOLDER_NAME):
@@ -29,6 +33,15 @@ class GoogleDriveSource(Source):
         self.done_folder_name = done_folder_name
         self._service         = None
         self._done_folder_id  = None
+
+    @classmethod
+    def build(cls, gui_input) -> "GoogleDriveSource":
+        # ``gui_input`` is the local staging folder downloads are written to.
+        path = (gui_input or "").strip()
+        if not path:
+            raise ValueError("Please choose a download folder.")
+        os.makedirs(path, exist_ok=True)
+        return cls()
 
     # ── Drive plumbing ─────────────────────────────────────────────────────────
 

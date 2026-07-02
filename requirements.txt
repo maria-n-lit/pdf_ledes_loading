@@ -8,3 +8,7 @@ google-auth-oauthlib==1.2.1
 
 # Loads per-install settings/secrets from a local .env file (config.py)
 python-dotenv==1.0.1
+
+# Optional: drag-and-drop of PDFs onto the window (Files source, main.py).
+# The app runs fine without it — the "Add…" picker still works.
+tkinterdnd2==0.4.2
