@@ -3,3 +3,10 @@ __pycache__/
 *.pyc
 *.pyo
 .idea/
+
+# Per-install settings / secrets — never commit (.env.example is the template)
+.env
+
+# Google OAuth secrets / cached token — never commit
+credentials.json
+token.json

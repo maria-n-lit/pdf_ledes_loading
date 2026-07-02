@@ -1,2 +1,10 @@
 pdfplumber==0.11.4
 pdfminer.six==20231228
+
+# Google Drive ingestion (sources/gdrive.py)
+google-api-python-client==2.149.0
+google-auth==2.35.0
+google-auth-oauthlib==1.2.1
+
+# Loads per-install settings/secrets from a local .env file (config.py)
+python-dotenv==1.0.1

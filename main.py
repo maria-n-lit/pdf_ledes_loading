@@ -12,38 +12,55 @@ from tkinter import filedialog, messagebox, scrolledtext, ttk
 from config import DEFAULT_INPUT_DIR, DEFAULT_OUTPUT_DIR
 from pdf_parser import parse_pdf
 from ledes_converter import save_ledes
+from sources.folder import FolderSource
+from sources.gdrive import GoogleDriveSource
 
 
 # ── Worker ────────────────────────────────────────────────────────────────────
 
-def run_conversion(input_dir: str, output_dir: str, log_fn, done_fn):
-    """Run in a background thread; calls log_fn for each status line."""
-    pdf_files = [
-        f for f in os.listdir(input_dir)
-        if f.lower().endswith(".pdf")
-    ]
+def run_conversion(source, staging_dir: str, output_dir: str, log_fn, done_fn):
+    """Run in a background thread; calls log_fn for each status line.
 
-    if not pdf_files:
-        log_fn("No PDF files found in the input folder.")
+    ``source`` is a Source (folder, Google Drive, …). It yields local PDF paths
+    which are then converted. Sources that support de-duplication
+    (``mark_processed``) are told which files converted successfully.
+    """
+    try:
+        files = source.fetch(staging_dir, log_fn)
+    except Exception as exc:
+        log_fn(f"Could not fetch files: {exc}")
+        done_fn(0, 0, fetch_error=str(exc))
+        return
+
+    if not files:
+        log_fn("No new PDF files to convert.")
         done_fn(0, 0)
         return
 
-    log_fn(f"Found {len(pdf_files)} PDF file(s). Starting conversion...\n")
+    log_fn(f"Starting conversion of {len(files)} file(s)...\n")
     ok = 0
     errors = 0
+    succeeded = []
 
-    for filename in pdf_files:
-        filepath = os.path.join(input_dir, filename)
-        log_fn(f"  Processing: {filename}")
+    for f in files:
+        log_fn(f"  Processing: {f.name}")
         try:
-            invoice = parse_pdf(filepath)
+            invoice = parse_pdf(f.path)
             out_path = save_ledes(invoice, output_dir)
             log_fn(f"    OK → {os.path.basename(out_path)}"
                    f"  (items: {len(invoice.line_items)}, total: {invoice.total:.2f})")
             ok += 1
+            succeeded.append(f)
         except Exception as exc:
             log_fn(f"    ERROR: {exc}")
             errors += 1
+
+    mark = getattr(source, "mark_processed", None)
+    if mark is not None and succeeded:
+        try:
+            mark(succeeded)
+        except Exception as exc:
+            log_fn(f"  (warning: could not record processed files: {exc})")
 
     done_fn(ok, errors)
 
@@ -64,17 +81,31 @@ class App(tk.Tk):
     def _build_ui(self):
         pad = {"padx": 10, "pady": 6}
 
+        # ── Source selector ───────────────────────────────────────────────────
+        frame_src = ttk.LabelFrame(self, text="Source", padding=8)
+        frame_src.pack(fill="x", **pad)
+
+        self.var_source = tk.StringVar(value="folder")
+        ttk.Radiobutton(frame_src, text="Local folder", value="folder",
+                        variable=self.var_source,
+                        command=self._on_source_change).pack(side="left")
+        ttk.Radiobutton(frame_src, text="Google Drive", value="gdrive",
+                        variable=self.var_source,
+                        command=self._on_source_change).pack(side="left", padx=(12, 0))
+
         # ── Folder selectors ──────────────────────────────────────────────────
         frame_dirs = ttk.LabelFrame(self, text="Folders", padding=8)
         frame_dirs.pack(fill="x", **pad)
         frame_dirs.columnconfigure(1, weight=1)
 
-        ttk.Label(frame_dirs, text="Input (PDF):").grid(row=0, column=0, sticky="w")
+        self.lbl_input = ttk.Label(frame_dirs, text="Input (PDF):")
+        self.lbl_input.grid(row=0, column=0, sticky="w")
         self.var_input = tk.StringVar(value=DEFAULT_INPUT_DIR)
         ttk.Entry(frame_dirs, textvariable=self.var_input).grid(
             row=0, column=1, sticky="ew", padx=(6, 4))
-        ttk.Button(frame_dirs, text="Browse…",
-                   command=self._browse_input).grid(row=0, column=2)
+        self.btn_browse_input = ttk.Button(frame_dirs, text="Browse…",
+                                           command=self._browse_input)
+        self.btn_browse_input.grid(row=0, column=2)
 
         ttk.Label(frame_dirs, text="Output (LEDES):").grid(row=1, column=0, sticky="w", pady=(4, 0))
         self.var_output = tk.StringVar(value=DEFAULT_OUTPUT_DIR)
@@ -154,26 +185,46 @@ class App(tk.Tk):
 
     # ── Conversion ────────────────────────────────────────────────────────────
 
+    def _on_source_change(self):
+        """Re-label the I/O controls to match the selected source."""
+        is_drive = self.var_source.get() == "gdrive"
+        self.lbl_input.configure(
+            text="Download to:" if is_drive else "Input (PDF):")
+        self.btn_convert.configure(
+            text="  Fetch & Convert  " if is_drive else "  Convert  ")
+
     def _start_conversion(self):
         input_dir = self.var_input.get().strip()
         output_dir = self.var_output.get().strip()
+        is_drive = self.var_source.get() == "gdrive"
 
-        if not input_dir or not os.path.isdir(input_dir):
-            messagebox.showerror("Error", f"Input folder not found:\n{input_dir}")
-            return
+        if is_drive:
+            # Drive mode: input_dir is the local staging folder for downloads.
+            if not input_dir:
+                messagebox.showerror("Error", "Please choose a download folder.")
+                return
+            os.makedirs(input_dir, exist_ok=True)
+            source = GoogleDriveSource()
+        else:
+            if not input_dir or not os.path.isdir(input_dir):
+                messagebox.showerror("Error", f"Input folder not found:\n{input_dir}")
+                return
+            source = FolderSource(input_dir)
 
         # Create output dir if it doesn't exist
         os.makedirs(output_dir, exist_ok=True)
 
         self.btn_convert.configure(state="disabled")
         self.progress.start(12)
-        self._log(f"Input:  {input_dir}")
+        self._log(f"Source: {source.name}")
+        self._log(f"{'Download to' if is_drive else 'Input'}:  {input_dir}")
         self._log(f"Output: {output_dir}")
         self._log("-" * 60)
 
         thread = threading.Thread(
             target=run_conversion,
-            args=(input_dir, output_dir, self._log_from_thread, self._on_done),
+            args=(source, input_dir, output_dir,
+                  self._log_from_thread, self._on_done),
             daemon=True,
         )
         thread.start()
@@ -182,11 +233,19 @@ class App(tk.Tk):
         # Thread-safe log call
         self.after(0, self._log, text)
 
-    def _on_done(self, ok: int, errors: int):
+    def _on_done(self, ok: int, errors: int, fetch_error: str | None = None):
         def _finish():
             self.progress.stop()
             self.btn_convert.configure(state="normal")
             self._log("-" * 60)
+
+            if fetch_error:
+                self._log(f"Could not fetch files: {fetch_error}")
+                messagebox.showerror(
+                    "Fetch failed",
+                    f"Could not fetch files from the source:\n\n{fetch_error}")
+                return
+
             self._log("Conversion complete.")
             self._log(f"  Successfully converted : {ok}")
             self._log(f"  Failed                 : {errors}")

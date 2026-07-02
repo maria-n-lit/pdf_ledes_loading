@@ -1,9 +1,50 @@
 import os
 
+_PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
+
+try:
+    from dotenv import load_dotenv
+    # Explicit path: resolve .env next to this file, not relative to the current
+    # working directory (which differs when the app is launched/packaged).
+    load_dotenv(os.path.join(_PROJECT_ROOT, ".env"))
+except ImportError:
+    pass  # python-dotenv is optional; fall back to real env vars / defaults
+
+
+def _resolve(path: str) -> str:
+    """Make a configured path absolute, relative to the project root."""
+    return path if os.path.isabs(path) else os.path.join(_PROJECT_ROOT, path)
+
+
 DESKTOP = os.path.join(os.path.expanduser("~"), "Desktop")
 
 DEFAULT_INPUT_DIR  = os.path.join(DESKTOP, "PDF_Input")
 DEFAULT_OUTPUT_DIR = os.path.join(DESKTOP, "LEDES_Output")
+
+# ── Google Drive ingestion (sources/gdrive.py) ────────────────────────────────
+# OAuth desktop-app client secret. Two ways to provide it (first one wins):
+#   1) Put GDRIVE_CLIENT_ID + GDRIVE_CLIENT_SECRET in .env (no file needed).
+#   2) Point GDRIVE_CREDENTIALS_FILE at the credentials.json from Google Cloud.
+# Keep either out of git (see .gitignore).
+GDRIVE_CLIENT_ID     = os.getenv("GDRIVE_CLIENT_ID", "")
+GDRIVE_CLIENT_SECRET = os.getenv("GDRIVE_CLIENT_SECRET", "")
+
+# Paths come from .env (or default to the project root) and are made absolute.
+GDRIVE_CREDENTIALS_FILE = _resolve(os.getenv("GDRIVE_CREDENTIALS_FILE", "credentials.json"))
+GDRIVE_TOKEN_FILE       = _resolve(os.getenv("GDRIVE_TOKEN_FILE", "token.json"))
+
+# Full Drive scope: we list + download PDFs and then MOVE processed files into
+# a "Done" subfolder, which requires write access.
+GDRIVE_SCOPES = ["https://www.googleapis.com/auth/drive"]
+
+# ID of the Drive folder that holds incoming invoice PDFs. Take it from the
+# folder URL: https://drive.google.com/drive/folders/<THIS_PART>
+GDRIVE_FOLDER_ID = os.getenv("GDRIVE_FOLDER_ID", "")
+
+# After successful conversion, files are moved into this subfolder (created on
+# demand). Files there are no longer listed, so "Fetch new" never reprocesses
+# them.
+GDRIVE_DONE_FOLDER_NAME = "Done"
 
 # ── Law firm configuration (edit for your firm) ───────────────────────────────
 LAW_FIRM_NAME      = "IMP"
